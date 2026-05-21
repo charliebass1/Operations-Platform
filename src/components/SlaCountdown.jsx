@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 
 function fmt(ms) {
-  if (ms <= 0) return 'BREACHED'
+  if (ms <= 0) return 'Breached'
   const h = Math.floor(ms / 3_600_000)
   const m = Math.floor((ms % 3_600_000) / 60_000)
   if (h > 23) return `${Math.floor(h / 24)}d ${h % 24}h`
   return `${h}h ${m}m`
 }
 
-export function SlaCountdown({ deadline, urgency }) {
+export function SlaCountdown({ deadline }) {
   const [remaining, setRemaining] = useState(deadline - Date.now())
 
   useEffect(() => {
@@ -18,15 +18,19 @@ export function SlaCountdown({ deadline, urgency }) {
 
   const isBreached = remaining <= 0
   const isCritical = remaining < 4 * 3_600_000
-  const color = isBreached ? 'var(--critical)' : isCritical ? 'var(--warn)' : 'var(--txt-2)'
+  const color = isBreached ? 'var(--red)'
+    : isCritical ? 'var(--amber)'
+    : 'var(--txt-3)'
 
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 12, color, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500,
+      fontSize: 12,
+      color,
+      fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: isBreached || isCritical ? 500 : 400,
+      letterSpacing: '-0.01em',
     }}>
-      <span style={{ fontSize: 10 }}>⏱</span>
-      SLA: {fmt(remaining)}
+      {fmt(remaining)}
     </span>
   )
 }

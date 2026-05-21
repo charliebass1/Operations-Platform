@@ -17,27 +17,27 @@ const noExperts = DOMAINS.filter(d => d.active_experts === 0)
 const totalTasks = DOMAINS.reduce((s, d) => s + d.tasks_reviewed, 0)
 const activeDomains = DOMAINS.filter(d => d.active_experts > 0).length
 
-function kappaLabel(k) {
-  if (k === null) return { text: 'No data', color: 'var(--txt-3)' }
-  if (k >= KAPPA_THRESHOLDS.EXCELLENT) return { text: 'Excellent', color: 'var(--ok)' }
-  if (k >= KAPPA_THRESHOLDS.GOOD) return { text: 'Good', color: 'var(--warn)' }
-  return { text: 'Below threshold', color: 'var(--critical)' }
-}
-
 function kappaColor(k) {
   if (k === null) return 'var(--border)'
-  if (k >= KAPPA_THRESHOLDS.EXCELLENT) return 'var(--ok)'
-  if (k >= KAPPA_THRESHOLDS.GOOD) return 'var(--warn)'
-  return 'var(--critical)'
+  if (k >= KAPPA_THRESHOLDS.EXCELLENT) return 'var(--green)'
+  if (k >= KAPPA_THRESHOLDS.GOOD)      return 'var(--amber)'
+  return 'var(--red)'
+}
+
+function kappaLabel(k) {
+  if (k === null) return { text: 'No data', color: 'var(--txt-3)' }
+  if (k >= KAPPA_THRESHOLDS.EXCELLENT) return { text: 'Excellent', color: 'var(--green)' }
+  if (k >= KAPPA_THRESHOLDS.GOOD)      return { text: 'Good',      color: 'var(--amber)' }
+  return { text: 'Below threshold', color: 'var(--red)' }
 }
 
 function TrendIndicator({ trend }) {
   if (trend === null) return <span style={{ color: 'var(--txt-3)', fontSize: 12 }}>—</span>
-  if (Math.abs(trend) < 0.005) return <span style={{ color: 'var(--txt-3)', fontSize: 12 }}>─ 0.00</span>
+  if (Math.abs(trend) < 0.005) return <span style={{ color: 'var(--txt-3)', fontSize: 12 }}>—</span>
   const up = trend > 0
   return (
-    <span style={{ color: up ? 'var(--ok)' : 'var(--critical)', fontSize: 12, fontWeight: 500 }}>
-      {up ? '▲' : '▼'} {Math.abs(trend).toFixed(2)}
+    <span style={{ color: up ? 'var(--green)' : 'var(--red)', fontSize: 12 }}>
+      {up ? '↑' : '↓'} {Math.abs(trend).toFixed(2)}
     </span>
   )
 }
@@ -45,21 +45,18 @@ function TrendIndicator({ trend }) {
 function MiniSparkline({ data }) {
   const valid = data.filter(v => v !== null)
   if (valid.length < 2) return <span style={{ color: 'var(--txt-3)', fontSize: 11 }}>—</span>
-  const chartData = data.map((v, i) => ({ i, v }))
+  const chartData = data.map((v, i) => ({ i, v: v ?? 0 }))
   const min = Math.min(...valid) - 0.02
   const max = Math.max(...valid) + 0.02
-  const color = valid[valid.length - 1] >= KAPPA_THRESHOLDS.EXCELLENT ? 'var(--ok)'
-    : valid[valid.length - 1] >= KAPPA_THRESHOLDS.GOOD ? 'var(--warn)' : 'var(--critical)'
+  const last = valid[valid.length - 1]
+  const color = last >= KAPPA_THRESHOLDS.EXCELLENT ? 'var(--green)'
+    : last >= KAPPA_THRESHOLDS.GOOD ? 'var(--amber)' : 'var(--red)'
 
   return (
-    <div style={{ width: 60, height: 22, display: 'inline-block' }}>
+    <div style={{ width: 56, height: 20, display: 'inline-block' }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
-          <Line
-            type="monotone" dataKey="v"
-            stroke={color} strokeWidth={1.5}
-            dot={false} isAnimationActive={false}
-          />
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} dot={false} isAnimationActive={false} />
           <YAxis domain={[min, max]} hide />
           <XAxis dataKey="i" hide />
         </LineChart>
@@ -68,17 +65,18 @@ function MiniSparkline({ data }) {
   )
 }
 
-const CustomTooltip = ({ active, payload }) => {
+const ChartTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
     <div style={{
-      background: '#1A1A1A', border: 'none',
-      borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#fff',
+      background: '#1C1917', borderRadius: 6, padding: '8px 12px',
+      fontSize: 12, color: '#fff', border: 'none',
     }}>
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.short}</div>
-      <div>κ = {d.kappa !== null ? d.kappa.toFixed(2) : 'N/A'}</div>
-      <div style={{ color: '#9B9B9B' }}>{d.tasks_reviewed} tasks · {d.active_experts} expert{d.active_experts !== 1 ? 's' : ''}</div>
+      <div style={{ fontWeight: 500, marginBottom: 3 }}>{d.short}</div>
+      <div style={{ color: '#A8A29E' }}>
+        {d.kappa !== null ? `κ = ${d.kappa.toFixed(2)}` : 'No data'} · {d.tasks_reviewed} tasks
+      </div>
     </div>
   )
 }
@@ -89,96 +87,109 @@ export function IrrTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Explainer */}
-      <div style={{
-        background: 'var(--info-lt)', border: '1px solid #BFDBFE',
-        borderRadius: 'var(--radius)', padding: '12px 16px',
-        fontSize: 13, color: 'var(--info)', lineHeight: 1.6,
-        display: 'flex', gap: 10, alignItems: 'flex-start',
-      }}>
-        <span style={{ flexShrink: 0, marginTop: 1 }}>ℹ</span>
-        <span>
-          <strong>Inter-rater reliability (κ)</strong> measures how consistently experts agree when independently annotating the same content. κ ≥ 0.80 = excellent; 0.70–0.80 = good; below 0.70 requires calibration. Anthropic's training data quality depends directly on this metric.
-        </span>
-      </div>
-
-      {/* KPI chips */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 12 }}>
-        {[
-          {
-            label: 'Program κ (weighted)', value: PROGRAM_KAPPA.toFixed(2),
-            accent: PROGRAM_KAPPA >= 0.80 ? 'var(--ok)' : PROGRAM_KAPPA >= 0.70 ? 'var(--warn)' : 'var(--critical)',
-            sub: PROGRAM_KAPPA >= 0.80 ? 'Excellent agreement' : PROGRAM_KAPPA >= 0.70 ? 'Good agreement' : 'Needs calibration',
-          },
-          { label: 'Active Domains', value: activeDomains, accent: 'var(--txt)', sub: `${DOMAINS.length} total tracked` },
-          {
-            label: 'Below Threshold', value: flagged.length,
-            accent: flagged.length > 0 ? 'var(--critical)' : 'var(--ok)',
-            sub: flagged.length > 0 ? 'Require calibration' : 'All within range',
-          },
-          { label: 'Tasks Reviewed', value: totalTasks.toLocaleString(), accent: 'var(--txt)', sub: '30-day rolling window' },
-        ].map(chip => (
-          <div key={chip.label} style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)', padding: '14px 16px',
-            boxShadow: 'var(--shadow-sm)',
-          }}>
-            <div style={{ fontSize: 24, fontWeight: 600, color: chip.accent, fontVariantNumeric: 'tabular-nums' }}>
-              {chip.value}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--txt-2)', marginTop: 4, fontWeight: 500 }}>{chip.label}</div>
-            <div style={{ fontSize: 11, color: 'var(--txt-3)', marginTop: 2 }}>{chip.sub}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Alerts */}
       {(flagged.length > 0 || noExperts.length > 0) && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {flagged.map(d => (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          overflow: 'hidden',
+        }}>
+          {flagged.map((d, i) => (
             <div key={d.domain} style={{
-              background: d.kappa < KAPPA_THRESHOLDS.GOOD ? 'var(--crit-lt)' : 'var(--warn-lt)',
-              border: `1px solid ${d.kappa < KAPPA_THRESHOLDS.GOOD ? '#FECACA' : '#FDE68A'}`,
-              borderRadius: 'var(--radius)', padding: '10px 14px',
-              fontSize: 13,
-              color: d.kappa < KAPPA_THRESHOLDS.GOOD ? 'var(--critical)' : 'var(--warn)',
-              display: 'flex', alignItems: 'center', gap: 10,
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              padding: '12px 16px',
+              borderBottom: i < flagged.length - 1 || noExperts.length > 0
+                ? '1px solid var(--divider)' : 'none',
             }}>
-              <span>⚠</span>
-              <span>
-                <strong>{d.domain}</strong> — κ = {d.kappa.toFixed(2)} (
-                {d.trend !== null && d.trend < 0 ? `↓ ${Math.abs(d.trend).toFixed(2)} trend · ` : ''}
-                {d.threshold_breaches_30d} breach{d.threshold_breaches_30d !== 1 ? 'es' : ''} last 30d
-                ) — calibration session recommended.
-              </span>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: d.kappa < KAPPA_THRESHOLDS.GOOD ? 'var(--red)' : 'var(--amber)',
+                flexShrink: 0, marginTop: 5,
+              }} />
+              <div style={{ fontSize: 13, color: 'var(--txt-2)', lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--txt)', fontWeight: 500 }}>{d.domain}</strong>
+                {' '}— κ = {d.kappa.toFixed(2)}
+                {d.trend !== null && d.trend < 0 && ` (↓ ${Math.abs(d.trend).toFixed(2)} trend)`}
+                {' '}· {d.threshold_breaches_30d} threshold breach{d.threshold_breaches_30d !== 1 ? 'es' : ''} last 30d. Calibration session recommended.
+              </div>
             </div>
           ))}
-          {noExperts.map(d => (
+          {noExperts.map((d, i) => (
             <div key={d.domain} style={{
-              background: '#F5F3FF', border: '1px solid #DDD6FE',
-              borderRadius: 'var(--radius)', padding: '10px 14px',
-              fontSize: 13, color: '#7C3AED',
-              display: 'flex', alignItems: 'center', gap: 10,
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              padding: '12px 16px',
+              borderBottom: i < noExperts.length - 1 ? '1px solid var(--divider)' : 'none',
             }}>
-              <span>○</span>
-              <span><strong>{d.domain}</strong> — no active experts. IRR not measurable. Coverage gap active.</span>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--txt-3)',
+                flexShrink: 0, marginTop: 5,
+              }} />
+              <div style={{ fontSize: 13, color: 'var(--txt-2)', lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--txt)', fontWeight: 500 }}>{d.domain}</strong>
+                {' '}— no active experts. IRR not measurable. Coverage gap active.
+              </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 12 }}>
+        {[
+          {
+            label: 'Program κ (weighted)',
+            value: PROGRAM_KAPPA.toFixed(2),
+            sub: PROGRAM_KAPPA >= 0.80 ? 'Excellent agreement' : PROGRAM_KAPPA >= 0.70 ? 'Good agreement' : 'Needs calibration',
+            dot: PROGRAM_KAPPA >= 0.80 ? 'var(--green)' : PROGRAM_KAPPA >= 0.70 ? 'var(--amber)' : 'var(--red)',
+          },
+          { label: 'Active Domains', value: activeDomains, sub: `${DOMAINS.length} total tracked`, dot: null },
+          {
+            label: 'Below Threshold',
+            value: flagged.length,
+            sub: flagged.length > 0 ? 'Require calibration' : 'All within range',
+            dot: flagged.length > 0 ? 'var(--red)' : 'var(--green)',
+          },
+          { label: 'Tasks Reviewed', value: totalTasks.toLocaleString(), sub: '30-day rolling window', dot: null },
+        ].map(chip => (
+          <div key={chip.label} style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)', padding: '18px 20px 16px',
+          }}>
+            <div style={{
+              fontSize: 30, fontWeight: 600, color: 'var(--txt)',
+              lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
+            }}>
+              {chip.value}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--txt-2)', marginTop: 7, fontWeight: 500 }}>
+              {chip.label}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
+              {chip.dot && (
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: chip.dot, display: 'inline-block' }} />
+              )}
+              <span style={{ fontSize: 11, color: 'var(--txt-3)' }}>{chip.sub}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Bar chart */}
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)',
-        padding: '20px 20px 12px 4px',
+        borderRadius: 'var(--radius)', padding: '20px 16px 16px 4px',
       }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16, paddingLeft: 16 }}>
-          κ Score by Domain — 30-day rolling
+        <div style={{
+          fontSize: 12, fontWeight: 500, color: 'var(--txt-3)',
+          marginBottom: 16, paddingLeft: 16,
+        }}>
+          Inter-rater reliability by domain — 30-day rolling κ
         </div>
         <ResponsiveContainer width="100%" height={sorted.length * 38 + 40}>
           <BarChart
-            data={sorted.map(d => ({ ...d, kappa: d.kappa ?? 0 }))}
+            data={sorted.map(d => ({ ...d, kappaVal: d.kappa ?? 0 }))}
             layout="vertical"
             margin={{ top: 0, right: 48, left: 8, bottom: 20 }}
           >
@@ -191,44 +202,55 @@ export function IrrTab() {
             />
             <YAxis
               type="category" dataKey="short"
-              width={isMobile ? 110 : 150}
-              tick={{ fontSize: isMobile ? 11 : 12, fill: 'var(--txt-2)' }}
+              width={isMobile ? 110 : 148}
+              tick={{ fontSize: 12, fill: 'var(--txt-2)' }}
               axisLine={false} tickLine={false}
             />
             <ReferenceLine
-              x={KAPPA_THRESHOLDS.GOOD} stroke="var(--warn)"
-              strokeDasharray="4 3" strokeWidth={1}
-              label={{ value: '0.70', position: 'insideTopRight', fontSize: 10, fill: 'var(--warn)', dy: -6 }}
+              x={KAPPA_THRESHOLDS.GOOD} stroke="var(--amber)"
+              strokeDasharray="3 3" strokeWidth={1}
             />
             <ReferenceLine
-              x={KAPPA_THRESHOLDS.EXCELLENT} stroke="var(--ok)"
-              strokeDasharray="4 3" strokeWidth={1}
-              label={{ value: '0.80', position: 'insideTopRight', fontSize: 10, fill: 'var(--ok)', dy: -6 }}
+              x={KAPPA_THRESHOLDS.EXCELLENT} stroke="var(--green)"
+              strokeDasharray="3 3" strokeWidth={1}
             />
-            <Bar dataKey="kappa" radius={[0, 4, 4, 0]} maxBarSize={22}>
+            <Bar dataKey="kappaVal" radius={[0, 4, 4, 0]} maxBarSize={20}>
               {sorted.map((d, i) => (
-                <Cell key={i} fill={kappaColor(d.kappa)} />
+                <Cell key={i} fill={kappaColor(d.kappa)} opacity={d.kappa === null ? 0.3 : 0.85} />
               ))}
             </Bar>
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
           </BarChart>
         </ResponsiveContainer>
-        <div style={{ display: 'flex', gap: 20, paddingLeft: isMobile ? 120 : 160, fontSize: 11, color: 'var(--txt-3)', marginTop: 4 }}>
-          <span><span style={{ color: 'var(--ok)' }}>■</span> Excellent ≥0.80</span>
-          <span><span style={{ color: 'var(--warn)' }}>■</span> Good ≥0.70</span>
-          <span><span style={{ color: 'var(--critical)' }}>■</span> Below threshold</span>
+        <div style={{
+          display: 'flex', gap: 18, paddingLeft: isMobile ? 116 : 158,
+          fontSize: 11, color: 'var(--txt-3)', marginTop: 2,
+        }}>
+          <span><span style={{ color: 'var(--green)' }}>■</span> Excellent ≥ 0.80</span>
+          <span><span style={{ color: 'var(--amber)' }}>■</span> Good ≥ 0.70</span>
+          <span><span style={{ color: 'var(--red)' }}>■</span> Below threshold</span>
         </div>
       </div>
 
-      {/* Domain detail table */}
+      {/* Domain table */}
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)',
-        overflow: 'hidden',
+        borderRadius: 'var(--radius)', overflow: 'hidden',
       }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Domain Detail
+        {/* Column headers */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr 80px' : '1fr 64px 72px 64px 64px 72px 100px',
+          gap: 8, padding: '10px 18px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface-2)',
+          fontSize: 11, color: 'var(--txt-3)', fontWeight: 500,
+        }}>
+          <span>Domain</span>
+          {!isMobile && <><span style={{ textAlign: 'center' }}>Experts</span><span style={{ textAlign: 'center' }}>κ</span><span style={{ textAlign: 'center' }}>Trend</span><span style={{ textAlign: 'center' }}>4-week</span><span style={{ textAlign: 'center' }}>Tasks</span></>}
+          <span style={{ textAlign: 'right' }}>Status</span>
         </div>
+
         {sorted.map((d, i) => {
           const { text, color } = kappaLabel(d.kappa)
           return (
@@ -236,11 +258,10 @@ export function IrrTab() {
               key={d.domain}
               style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 80px 80px 70px 90px 90px 70px',
+                gridTemplateColumns: isMobile ? '1fr 80px' : '1fr 64px 72px 64px 64px 72px 100px',
                 gap: 8, alignItems: 'center',
-                padding: '12px 16px',
-                borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none',
-                background: d.kappa !== null && d.kappa < KAPPA_THRESHOLDS.GOOD ? 'rgba(220,38,38,0.02)' : 'transparent',
+                padding: '13px 18px',
+                borderBottom: i < sorted.length - 1 ? '1px solid var(--divider)' : 'none',
               }}
             >
               <div>
@@ -253,23 +274,30 @@ export function IrrTab() {
               </div>
               {!isMobile && (
                 <>
-                  <div style={{ fontSize: 12, color: 'var(--txt-2)', textAlign: 'center' }}>{d.active_experts}</div>
+                  <div style={{ fontSize: 12, color: 'var(--txt-3)', textAlign: 'center' }}>{d.active_experts}</div>
                   <div style={{
                     fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 13, fontWeight: 600, color: kappaColor(d.kappa), textAlign: 'center',
+                    fontSize: 13, fontWeight: 500, color: kappaColor(d.kappa),
+                    textAlign: 'center',
                   }}>
                     {d.kappa !== null ? d.kappa.toFixed(2) : '—'}
                   </div>
                   <div style={{ textAlign: 'center' }}><TrendIndicator trend={d.trend} /></div>
-                  <div style={{ textAlign: 'center' }}><MiniSparkline data={d.sparkline} /></div>
-                  <div style={{ fontSize: 12, color: 'var(--txt-2)', textAlign: 'center' }}>{d.tasks_reviewed}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}><MiniSparkline data={d.sparkline} /></div>
+                  <div style={{ fontSize: 12, color: 'var(--txt-3)', textAlign: 'center' }}>{d.tasks_reviewed}</div>
                 </>
               )}
-              <div style={{ display: 'flex', justifyContent: isMobile ? 'flex-end' : 'center', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 8px',
-                  borderRadius: 4, background: color === 'var(--ok)' ? 'var(--ok-lt)' : color === 'var(--warn)' ? 'var(--warn-lt)' : color === 'var(--critical)' ? 'var(--crit-lt)' : 'var(--bg)',
-                  color, border: `1px solid ${color === 'var(--ok)' ? '#BBF7D0' : color === 'var(--warn)' ? '#FDE68A' : color === 'var(--critical)' ? '#FECACA' : 'var(--border)'}`,
+                  fontSize: 11, fontWeight: 500, padding: '2px 8px',
+                  borderRadius: 'var(--radius-xs)',
+                  color,
+                  background: color === 'var(--green)' ? 'var(--green-lt)'
+                    : color === 'var(--amber)' ? 'var(--amber-lt)'
+                    : color === 'var(--red)' ? 'var(--red-lt)' : 'var(--bg)',
+                  border: `1px solid ${color === 'var(--green)' ? 'var(--green-border)'
+                    : color === 'var(--amber)' ? 'var(--amber-border)'
+                    : color === 'var(--red)' ? 'var(--red-border)' : 'var(--border)'}`,
                 }}>
                   {text}
                 </span>
@@ -277,22 +305,12 @@ export function IrrTab() {
             </div>
           )
         })}
-        {!isMobile && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 80px 80px 70px 90px 90px 70px',
-            gap: 8, padding: '8px 16px',
-            borderTop: '1px solid var(--border)',
-            background: 'var(--bg)',
-          }}>
-            {['Domain', 'Experts', 'κ Score', 'Trend', '4-week', 'Tasks', 'Status'].map(h => (
-              <div key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: h === 'Domain' ? 'left' : 'center' }}>
-                {h}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Explainer footnote */}
+      <p style={{ fontSize: 12, color: 'var(--txt-3)', lineHeight: 1.65 }}>
+        κ (Cohen's kappa) measures pairwise expert agreement independent of chance. κ ≥ 0.80 = excellent; 0.70–0.80 = acceptable; below 0.70 triggers a calibration review. Weights are task-count proportional.
+      </p>
     </div>
   )
 }

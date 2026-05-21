@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { UrgencyBadge, CategoryBadge, RuleBadge } from '../components/Badge.jsx'
+import { UrgencyDot, CategoryBadge, RuleBadge } from '../components/Badge.jsx'
 import { SlaCountdown } from '../components/SlaCountdown.jsx'
 
 const URGENCY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
@@ -15,20 +15,19 @@ function ActionButton({ option, onAction, disabled }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        padding: '9px 18px',
+        padding: '8px 16px',
         borderRadius: 'var(--radius-sm)',
-        fontSize: 13, fontWeight: 600,
+        fontSize: 13, fontWeight: 500,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'background var(--transition), box-shadow var(--transition)',
-        opacity: disabled ? 0.5 : 1,
+        transition: 'background var(--transition)',
+        opacity: disabled ? 0.45 : 1,
         ...(isPrimary ? {
-          background: hover ? 'var(--orange-mid)' : 'var(--orange)',
+          background: hover ? 'var(--accent-mid)' : 'var(--accent)',
           color: '#fff',
           border: 'none',
-          boxShadow: hover ? '0 2px 8px rgba(207,105,53,0.4)' : 'none',
         } : {
-          background: hover ? '#F5F4F2' : 'var(--surface)',
-          color: 'var(--txt)',
+          background: hover ? 'var(--surface-2)' : 'var(--surface)',
+          color: 'var(--txt-2)',
           border: '1px solid var(--border)',
         }),
       }}
@@ -40,147 +39,127 @@ function ActionButton({ option, onAction, disabled }) {
 
 function DecisionItem({ item, onAction }) {
   const [expanded, setExpanded] = useState(false)
-
-  const borderColor = item.urgency === 'CRITICAL'
-    ? '#FECACA'
-    : item.urgency === 'HIGH'
-    ? '#FDE68A'
-    : 'var(--border)'
-
-  const urgencyAccent = item.urgency === 'CRITICAL'
-    ? '#DC2626'
-    : item.urgency === 'HIGH'
-    ? '#D97706'
-    : '#2563EB'
+  const [hover, setHover] = useState(false)
 
   return (
     <div style={{
       background: 'var(--surface)',
-      border: `1px solid ${borderColor}`,
-      borderLeft: `3px solid ${urgencyAccent}`,
+      border: '1px solid var(--border)',
       borderRadius: 'var(--radius)',
-      boxShadow: 'var(--shadow-sm)',
       overflow: 'hidden',
-      transition: 'box-shadow var(--transition)',
     }}>
-      {/* Header row — always visible */}
+      {/* Collapsed row */}
       <div
         role="button"
         tabIndex={0}
         onClick={() => setExpanded(e => !e)}
         onKeyDown={e => e.key === 'Enter' && setExpanded(v => !v)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 18px', cursor: 'pointer',
-          userSelect: 'none',
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '15px 18px',
+          cursor: 'pointer', userSelect: 'none',
+          background: expanded ? 'var(--surface-2)' : hover ? 'var(--surface-2)' : 'var(--surface)',
+          transition: 'background var(--transition)',
         }}
       >
-        <div style={{
-          transform: `rotate(${expanded ? 90 : 0}deg)`,
-          transition: 'transform var(--transition)',
-          color: 'var(--txt-3)', fontSize: 12, flexShrink: 0,
-        }}>▶</div>
+        {/* Urgency dot */}
+        <UrgencyDot level={item.urgency} />
 
+        {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-            <UrgencyBadge level={item.urgency} />
-            <CategoryBadge category={item.category} />
-            <span style={{
-              fontSize: 11, color: 'var(--txt-3)',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}>
-              {item.id}
-            </span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--txt)', lineHeight: 1.4 }}>
+          <div style={{
+            fontSize: 14, fontWeight: 500, color: 'var(--txt)',
+            lineHeight: 1.35, marginBottom: 3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
             {item.title}
           </div>
-          {item.expert && (
-            <div style={{ fontSize: 12, color: 'var(--txt-2)', marginTop: 2 }}>
-              {item.expert.name} · {item.expert.id} · {item.expert.domain} · {item.expert.tier}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--txt-3)' }}>
+            {item.expert && (
+              <span>{item.expert.name} · {item.expert.domain}</span>
+            )}
+            {item.expert && <span style={{ color: 'var(--divider)' }}>·</span>}
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>{item.id}</span>
+          </div>
         </div>
 
-        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
+          <CategoryBadge category={item.category} />
           <SlaCountdown deadline={item.sla_deadline} urgency={item.urgency} />
+          <span style={{
+            color: 'var(--txt-4)', fontSize: 16, lineHeight: 1,
+            transform: expanded ? 'rotate(90deg)' : 'none',
+            transition: 'transform var(--transition)',
+            display: 'inline-block',
+          }}>›</span>
         </div>
       </div>
 
-      {/* Expanded detail panel */}
+      {/* Expanded panel */}
       {expanded && (
         <div style={{
-          borderTop: '1px solid var(--border)',
-          padding: '20px 20px 20px 42px',
-          display: 'flex', flexDirection: 'column', gap: 18,
-          background: '#FDFCFB',
+          borderTop: '1px solid var(--divider)',
+          background: 'var(--surface)',
         }}>
-          {/* Situation */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-              Situation
+          {/* Situation + Timeline in a 2-col layout */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+            <div style={{ padding: '20px 24px', borderRight: '1px solid var(--divider)' }}>
+              <div style={{ fontSize: 11, color: 'var(--txt-3)', marginBottom: 8, fontWeight: 500 }}>
+                Situation
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--txt-2)', lineHeight: 1.75 }}>
+                {item.situation}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--txt)', lineHeight: 1.7 }}>
-              {item.situation}
+
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ fontSize: 11, color: 'var(--txt-3)', marginBottom: 8, fontWeight: 500 }}>
+                Timeline
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {item.timeline.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 14, fontSize: 13 }}>
+                    <span style={{
+                      flexShrink: 0, width: 40,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11, color: 'var(--txt-3)', paddingTop: 1,
+                    }}>
+                      {t.at}
+                    </span>
+                    <span style={{ color: 'var(--txt-2)', lineHeight: 1.5 }}>{t.event}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Timeline */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-              Timeline
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {item.timeline.map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, fontSize: 13 }}>
-                  <span style={{
-                    flexShrink: 0, width: 72,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11, color: 'var(--txt-3)', paddingTop: 1,
-                  }}>
-                    {t.at}
-                  </span>
-                  <span style={{ color: 'var(--txt-2)', lineHeight: 1.5 }}>{t.event}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rule that fired */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-              Automation
-            </div>
+          {/* Footer: rule + links + actions */}
+          <div style={{
+            borderTop: '1px solid var(--divider)',
+            padding: '16px 24px',
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+            background: 'var(--surface-2)',
+          }}>
             <RuleBadge text={item.rule} />
-          </div>
 
-          {/* Links */}
-          {item.links?.length > 0 && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {item.links.map((l, i) => (
-                <a
-                  key={i}
-                  href={l.href}
-                  onClick={e => e.preventDefault()}
-                  style={{
-                    fontSize: 12, color: 'var(--orange)',
-                    textDecoration: 'none', fontWeight: 500,
-                    borderBottom: '1px solid var(--orange-lt)',
-                    paddingBottom: 1,
-                  }}
-                >
-                  {l.label} ↗
-                </a>
-              ))}
-            </div>
-          )}
+            {item.links?.map((l, i) => (
+              <a
+                key={i}
+                href={l.href}
+                onClick={e => e.preventDefault()}
+                style={{
+                  fontSize: 12, color: 'var(--accent)',
+                  textDecoration: 'none', fontWeight: 500,
+                }}
+              >
+                {l.label} ↗
+              </a>
+            ))}
 
-          {/* Actions */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-              Decision Required
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {item.options.map((opt, i) => (
                 <ActionButton key={i} option={opt} onAction={onAction} />
               ))}
@@ -200,33 +179,33 @@ export function QueueTab({ items, onAction, onReset }) {
   if (open.length === 0) {
     return (
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '80px 32px', textAlign: 'center', gap: 16,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '80px 32px', textAlign: 'center', gap: 14,
       }}>
         <div style={{
-          width: 56, height: 56, borderRadius: '50%',
-          background: 'var(--ok-lt)', border: '1px solid #BBF7D0',
+          width: 44, height: 44, borderRadius: '50%',
+          background: 'var(--green-lt)', border: '1px solid var(--green-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22, color: 'var(--ok)',
+          fontSize: 18, color: 'var(--green)',
         }}>
           ✓
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--txt)', marginBottom: 6 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--txt)', marginBottom: 5 }}>
             Queue clear
           </div>
-          <div style={{ fontSize: 14, color: 'var(--txt-2)', maxWidth: 360, lineHeight: 1.6 }}>
-            All decisions have been actioned. The operations engine is running smoothly.
+          <div style={{ fontSize: 13, color: 'var(--txt-3)', maxWidth: 320, lineHeight: 1.65 }}>
+            All decisions have been actioned.
           </div>
         </div>
         <button
           onClick={onReset}
           style={{
-            marginTop: 8, padding: '9px 18px',
+            marginTop: 4, padding: '8px 16px',
             borderRadius: 'var(--radius-sm)',
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            color: 'var(--txt-2)', fontSize: 13, fontWeight: 500,
+            color: 'var(--txt-3)', fontSize: 13, fontWeight: 500,
             cursor: 'pointer',
           }}
         >
@@ -237,7 +216,19 @@ export function QueueTab({ items, onAction, onReset }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Column headers — subtle, only on wider view */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '0 18px 6px',
+        fontSize: 11, color: 'var(--txt-3)', fontWeight: 500,
+      }}>
+        <span style={{ width: 8, flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>Decision</span>
+        <span style={{ width: 120, textAlign: 'right' }}>Category</span>
+        <span style={{ width: 64, textAlign: 'right' }}>SLA</span>
+        <span style={{ width: 16 }} />
+      </div>
       {open.map(item => (
         <DecisionItem key={item.id} item={item} onAction={(opt) => onAction(item.id, opt)} />
       ))}

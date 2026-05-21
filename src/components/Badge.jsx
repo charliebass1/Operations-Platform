@@ -1,31 +1,30 @@
-const URGENCY_STYLES = {
-  CRITICAL: { bg: 'var(--crit-lt)', color: 'var(--critical)', border: '#FECACA' },
-  HIGH:     { bg: 'var(--warn-lt)', color: 'var(--warn)',     border: '#FDE68A' },
-  MEDIUM:   { bg: 'var(--info-lt)', color: 'var(--info)',     border: '#BFDBFE' },
-  LOW:      { bg: 'var(--ok-lt)',   color: 'var(--ok)',       border: '#BBF7D0' },
+const DOT_COLOR = {
+  CRITICAL: 'var(--dot-critical)',
+  HIGH:     'var(--dot-high)',
+  MEDIUM:   'var(--dot-medium)',
+  LOW:      'var(--dot-low)',
 }
 
 const STATUS_STYLES = {
-  OPEN:     { bg: 'var(--orange-lt)', color: 'var(--orange)', border: '#FDBA74' },
-  RESOLVED: { bg: 'var(--ok-lt)',     color: 'var(--ok)',     border: '#BBF7D0' },
-  ESCALATED:{ bg: 'var(--warn-lt)',   color: 'var(--warn)',   border: '#FDE68A' },
-  DEFERRED: { bg: '#F5F3FF',          color: '#7C3AED',       border: '#DDD6FE' },
+  OPEN:      { color: 'var(--accent)',  bg: 'var(--accent-lt)',  border: '#F6C9B0' },
+  RESOLVED:  { color: 'var(--green)',   bg: 'var(--green-lt)',   border: 'var(--green-border)' },
+  ESCALATED: { color: 'var(--amber)',   bg: 'var(--amber-lt)',   border: 'var(--amber-border)' },
+  DEFERRED:  { color: '#7C3AED',        bg: '#F5F3FF',           border: '#DDD6FE' },
+}
+
+export function UrgencyDot({ level }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 8, height: 8, borderRadius: '50%',
+      background: DOT_COLOR[level] ?? DOT_COLOR.MEDIUM,
+      flexShrink: 0,
+    }} />
+  )
 }
 
 export function UrgencyBadge({ level }) {
-  const s = URGENCY_STYLES[level] ?? URGENCY_STYLES.MEDIUM
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 8px', borderRadius: 'var(--radius-xs)',
-      fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
-      background: s.bg, color: s.color,
-      border: `1px solid ${s.border}`,
-    }}>
-      {level === 'CRITICAL' && <span style={{ fontSize: 8 }}>●</span>}
-      {level}
-    </span>
-  )
+  return <UrgencyDot level={level} />
 }
 
 export function StatusBadge({ status }) {
@@ -33,8 +32,8 @@ export function StatusBadge({ status }) {
   return (
     <span style={{
       display: 'inline-block',
-      padding: '2px 8px', borderRadius: 'var(--radius-xs)',
-      fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
+      padding: '2px 7px', borderRadius: 'var(--radius-xs)',
+      fontSize: 11, fontWeight: 500,
       background: s.bg, color: s.color,
       border: `1px solid ${s.border}`,
     }}>
@@ -45,13 +44,7 @@ export function StatusBadge({ status }) {
 
 export function CategoryBadge({ category }) {
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 8px', borderRadius: 'var(--radius-xs)',
-      fontSize: 11, fontWeight: 500,
-      background: 'var(--bg)', color: 'var(--txt-2)',
-      border: '1px solid var(--border)',
-    }}>
+    <span style={{ fontSize: 12, color: 'var(--txt-3)', fontWeight: 400 }}>
       {category}
     </span>
   )
@@ -60,13 +53,12 @@ export function CategoryBadge({ category }) {
 export function RuleBadge({ text }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '3px 8px', borderRadius: 'var(--radius-xs)',
+      display: 'inline-block',
+      padding: '2px 8px', borderRadius: 'var(--radius-xs)',
       fontSize: 11, fontWeight: 500,
-      background: 'var(--orange-lt)', color: 'var(--orange)',
-      border: '1px solid #FDBA74',
+      background: 'var(--accent-lt)', color: 'var(--accent)',
+      border: '1px solid #F6C9B0',
     }}>
-      <span style={{ fontSize: 9 }}>⚡</span>
       Rule: {text}
     </span>
   )
