@@ -1,4 +1,5 @@
 import { UrgencyBadge, StatusBadge, CategoryBadge } from '../components/Badge.jsx'
+import { useWindowSize } from '../hooks/useWindowSize.js'
 
 function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -12,10 +13,12 @@ function fmtDatetime(ts) {
 }
 
 export function ResolvedTab({ items, history }) {
+  const width = useWindowSize()
+  const isMobile = width < 768
   const resolved = items.filter(i => i.status !== 'OPEN')
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 20, alignItems: 'start' }}>
       {/* Resolved items */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
