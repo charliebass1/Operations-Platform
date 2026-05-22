@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { INITIAL_ITEMS } from './data/decisions.js'
+import { deriveResearchState } from './data/research.js'
 import { loadItems, saveItems, loadHistory, appendHistory, clearAll } from './lib/storage.js'
 import { KpiChip } from './components/KpiChip.jsx'
 import { Toast } from './components/Toast.jsx'
 import { VisionModal } from './components/VisionModal.jsx'
+import { ResearchTab } from './tabs/ResearchTab.jsx'
 import { QueueTab } from './tabs/QueueTab.jsx'
 import { ResolvedTab } from './tabs/ResolvedTab.jsx'
 import { RulesTab } from './tabs/RulesTab.jsx'
@@ -11,10 +13,11 @@ import { IrrTab } from './tabs/IrrTab.jsx'
 import { useWindowSize } from './hooks/useWindowSize.js'
 
 const TABS = [
-  { label: 'Open Queue',       shortLabel: 'Queue'    },
-  { label: 'Data Quality',     shortLabel: 'Quality'  },
-  { label: 'Automation Rules', shortLabel: 'Rules'    },
-  { label: 'Resolved',         shortLabel: 'Resolved' },
+  { label: 'Research Effort', shortLabel: 'Research' },
+  { label: 'Open Queue',      shortLabel: 'Queue'    },
+  { label: 'Data Quality',    shortLabel: 'Quality'  },
+  { label: 'Automation Rules',shortLabel: 'Rules'    },
+  { label: 'Resolved',        shortLabel: 'Resolved' },
 ]
 
 export default function App() {
@@ -27,11 +30,13 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [showVision, setShowVision] = useState(false)
 
-  const openCount = items.filter(i => i.status === 'OPEN').length
-  const slaRiskCount = items.filter(i =>
+  const openCount     = items.filter(i => i.status === 'OPEN').length
+  const slaRiskCount  = items.filter(i =>
     i.status === 'OPEN' && (i.sla_deadline - Date.now()) < 20 * 3_600_000
   ).length
   const resolvedCount = items.filter(i => i.status !== 'OPEN').length
+
+  const { batches, experts } = useMemo(() => deriveResearchState(items), [items])
 
   const handleAction = useCallback((itemId, option) => {
     const newStatus = option.label.toLowerCase().includes('defer') ? 'DEFERRED'
@@ -39,7 +44,7 @@ export default function App() {
       : 'RESOLVED'
 
     const updated = items.map(i =>
-      i.id === itemId ? { ...i, status: newStatus } : i
+      i.id === itemId ? { ...i, status: newStatus, resolution: option.label } : i
     )
     setItems(updated)
     saveItems(updated)
@@ -76,7 +81,6 @@ export default function App() {
           display: 'flex', alignItems: 'center',
           height: 60, gap: 20,
         }}>
-          {/* Wordmark */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect width="24" height="24" rx="5" fill="var(--accent)" />
@@ -154,8 +158,8 @@ export default function App() {
           {TABS.map((tab, i) => {
             const label = isMobile ? tab.shortLabel : tab.label
             const isActive = activeTab === i
-            const count = i === 0 && openCount > 0 ? openCount
-              : i === 3 && resolvedCount > 0 ? resolvedCount
+            const count = i === 1 && openCount > 0 ? openCount
+              : i === 4 && resolvedCount > 0 ? resolvedCount
               : null
 
             return (
@@ -194,10 +198,17 @@ export default function App() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 0 && <QueueTab items={items} onAction={handleAction} onReset={handleReset} />}
-        {activeTab === 1 && <IrrTab />}
-        {activeTab === 2 && <RulesTab />}
-        {activeTab === 3 && <ResolvedTab items={items} history={history} />}
+        {activeTab === 0 && (
+          <ResearchTab
+            batches={batches}
+            experts={experts}
+            onGoToQueue={() => setActiveTab(1)}
+          />
+        )}
+        {activeTab === 1 && <QueueTab items={items} onAction={handleAction} onReset={handleReset} />}
+        {activeTab === 2 && <IrrTab />}
+        {activeTab === 3 && <RulesTab />}
+        {activeTab === 4 && <ResolvedTab items={items} history={history} />}
       </main>
 
       {showVision && <VisionModal onClose={() => setShowVision(false)} />}
