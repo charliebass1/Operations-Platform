@@ -1,23 +1,20 @@
 import { useState, useCallback, useMemo } from 'react'
 import { INITIAL_ITEMS } from './data/decisions.js'
 import { deriveResearchState } from './data/research.js'
+import { CAPTURE_PROGRAMS, deriveProgramState } from './data/programData.js'
 import { loadItems, saveItems, loadHistory, appendHistory, clearAll } from './lib/storage.js'
 import { KpiChip } from './components/KpiChip.jsx'
 import { Toast } from './components/Toast.jsx'
 import { VisionModal } from './components/VisionModal.jsx'
-import { ResearchTab } from './tabs/ResearchTab.jsx'
-import { QueueTab } from './tabs/QueueTab.jsx'
-import { ResolvedTab } from './tabs/ResolvedTab.jsx'
-import { RulesTab } from './tabs/RulesTab.jsx'
-import { IrrTab } from './tabs/IrrTab.jsx'
+import { DashboardTab } from './tabs/DashboardTab.jsx'
+import { OpsTab } from './tabs/OpsTab.jsx'
+import { ResearchDesignTab } from './tabs/ResearchDesignTab.jsx'
 import { useWindowSize } from './hooks/useWindowSize.js'
 
 const TABS = [
-  { label: 'Research Effort', shortLabel: 'Research' },
-  { label: 'Open Queue',      shortLabel: 'Queue'    },
-  { label: 'Data Quality',    shortLabel: 'Quality'  },
-  { label: 'Automation Rules',shortLabel: 'Rules'    },
-  { label: 'Resolved',        shortLabel: 'Resolved' },
+  { label: 'Dashboard',       shortLabel: 'Dashboard' },
+  { label: 'Ops',             shortLabel: 'Ops'       },
+  { label: 'Research Design', shortLabel: 'Research'  },
 ]
 
 export default function App() {
@@ -30,13 +27,14 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [showVision, setShowVision] = useState(false)
 
-  const openCount     = items.filter(i => i.status === 'OPEN').length
-  const slaRiskCount  = items.filter(i =>
+  const openCount    = items.filter(i => i.status === 'OPEN').length
+  const slaRiskCount = items.filter(i =>
     i.status === 'OPEN' && (i.sla_deadline - Date.now()) < 20 * 3_600_000
   ).length
   const resolvedCount = items.filter(i => i.status !== 'OPEN').length
 
   const { batches, experts } = useMemo(() => deriveResearchState(items), [items])
+  const programs = useMemo(() => deriveProgramState(CAPTURE_PROGRAMS, items), [items])
 
   const handleAction = useCallback((itemId, option) => {
     const newStatus = option.label.toLowerCase().includes('defer') ? 'DEFERRED'
@@ -49,13 +47,12 @@ export default function App() {
     setItems(updated)
     saveItems(updated)
 
-    const entry = {
+    const newHistory = appendHistory({
       timestamp: Date.now(),
       item_id: itemId,
       action_taken: option.confirms_to,
       actor: 'Ops Manager',
-    }
-    const newHistory = appendHistory(entry)
+    })
     setHistory(newHistory)
     setToast(option.confirms_to)
   }, [items])
@@ -69,17 +66,14 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Header */}
       <header style={{
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{
-          maxWidth: 1100, margin: '0 auto',
-          padding: '0 24px',
-          display: 'flex', alignItems: 'center',
-          height: 60, gap: 20,
+          maxWidth: 1160, margin: '0 auto', padding: '0 24px',
+          display: 'flex', alignItems: 'center', height: 60, gap: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -87,10 +81,7 @@ export default function App() {
               <text x="12" y="17" textAnchor="middle" fill="white"
                 fontFamily="Inter, sans-serif" fontSize="13" fontWeight="600">A</text>
             </svg>
-            <span style={{
-              fontSize: 14, fontWeight: 600, color: 'var(--txt)',
-              letterSpacing: '-0.01em',
-            }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--txt)', letterSpacing: '-0.01em' }}>
               {isMobile ? 'HD Ops' : 'Human Data Operations'}
             </span>
           </div>
@@ -100,10 +91,8 @@ export default function App() {
           <button
             onClick={() => setShowVision(true)}
             style={{
-              background: 'none', border: 'none',
-              fontSize: 13, color: 'var(--txt-3)',
-              cursor: 'pointer', padding: '4px 0',
-              fontWeight: 400,
+              background: 'none', border: 'none', fontSize: 13, color: 'var(--txt-3)',
+              cursor: 'pointer', padding: '4px 0', fontWeight: 400,
               transition: 'color var(--transition)',
             }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--txt)'}
@@ -114,13 +103,12 @@ export default function App() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '24px 16px' : '32px 24px' }}>
+      <main style={{ maxWidth: 1160, margin: '0 auto', padding: isMobile ? '24px 16px' : '32px 24px' }}>
         {/* KPI chips */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-          gap: 12,
-          marginBottom: 32,
+          gap: 12, marginBottom: 32,
         }}>
           <KpiChip
             label="Open Decisions"
@@ -141,10 +129,10 @@ export default function App() {
             sub={resolvedCount > 0 ? 'Decisions actioned' : 'Nothing resolved yet'}
           />
           <KpiChip
-            label="Active Rules"
-            value={5}
+            label="Capture Programs"
+            value={programs.filter(p => p.status === 'ACTIVE' || p.status === 'IN REVIEW').length}
             dotColor={null}
-            sub="Automation layer"
+            sub={`${programs.filter(p => p.status === 'BLOCKED').length} blocked`}
           />
         </div>
 
@@ -158,9 +146,7 @@ export default function App() {
           {TABS.map((tab, i) => {
             const label = isMobile ? tab.shortLabel : tab.label
             const isActive = activeTab === i
-            const count = i === 1 && openCount > 0 ? openCount
-              : i === 4 && resolvedCount > 0 ? resolvedCount
-              : null
+            const count = i === 1 && openCount > 0 ? openCount : null
 
             return (
               <button
@@ -199,16 +185,28 @@ export default function App() {
 
         {/* Tab content */}
         {activeTab === 0 && (
-          <ResearchTab
+          <DashboardTab
             batches={batches}
             experts={experts}
-            onGoToQueue={() => setActiveTab(1)}
+            programs={programs}
+            onGoToOps={() => setActiveTab(1)}
           />
         )}
-        {activeTab === 1 && <QueueTab items={items} onAction={handleAction} onReset={handleReset} />}
-        {activeTab === 2 && <IrrTab />}
-        {activeTab === 3 && <RulesTab />}
-        {activeTab === 4 && <ResolvedTab items={items} history={history} />}
+        {activeTab === 1 && (
+          <OpsTab
+            items={items}
+            history={history}
+            onAction={handleAction}
+            onReset={handleReset}
+          />
+        )}
+        {activeTab === 2 && (
+          <ResearchDesignTab
+            programs={programs}
+            items={items}
+            onGoToOps={() => setActiveTab(1)}
+          />
+        )}
       </main>
 
       {showVision && <VisionModal onClose={() => setShowVision(false)} />}
