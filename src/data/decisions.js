@@ -13,6 +13,10 @@ export const INITIAL_ITEMS = [
     rule: '3+ distress flags in 7 days → Decision Queue',
     sla_deadline: h(4),
     status: 'OPEN',
+    lifecycle: {
+      stages: ['Screening', 'Monitoring', 'Flag Review', 'Decision', 'Resolution'],
+      blocked_at: 3,
+    },
     links: [
       { label: 'Expert profile', href: '#' },
       { label: 'Session history', href: '#' },
@@ -40,27 +44,31 @@ export const INITIAL_ITEMS = [
     id: 'DQ-002',
     urgency: 'HIGH',
     category: 'SLA Risk',
-    title: 'Particle Physics request approaching SLA breach',
+    title: 'Clinical medicine eval requests approaching SLA breach',
     expert: null,
     situation:
-      'REQ-041 (advanced particle physics annotation, 6 tasks) was submitted 38h ago. SLA window is 54h. Current match count: 0 qualified experts available. Domain has 2 registered experts; both are on active cooldown.',
+      'REQ-041 (clinical diagnostic reasoning annotation, 6 tasks) was submitted 38h ago. SLA window is 54h. Current match count: 0 qualified experts available. Domain has 2 registered experts; both are on active cooldown. Tasks require MD-level expertise with diagnostics experience.',
     rule: 'Request unmatched with <20h to SLA → Decision Queue',
     sla_deadline: h(16),
     status: 'OPEN',
+    lifecycle: {
+      stages: ['Request', 'Auto-match', 'Expert Gap', 'Assignment', 'Collection'],
+      blocked_at: 2,
+    },
     links: [
       { label: 'REQ-041 detail', href: '#' },
       { label: 'Domain coverage report', href: '#' },
     ],
     timeline: [
-      { at: 'T+0h', event: 'REQ-041 submitted by research team' },
-      { at: 'T+2h', event: 'Auto-match attempted — 0 available experts found' },
+      { at: 'T+0h', event: 'REQ-041 submitted — clinical diagnostic reasoning study (6 tasks)' },
+      { at: 'T+2h', event: 'Auto-match attempted — 0 available clinical experts found' },
       { at: 'T+38h', event: 'Escalation rule triggered — entering Decision Queue' },
     ],
     options: [
       {
         label: 'Escalate to sourcing team',
         variant: 'primary',
-        confirms_to: 'Escalated — sourcing team notified. Emergency expert search initiated for Particle Physics.',
+        confirms_to: 'Escalated — sourcing team notified. Emergency expert search initiated for Clinical Medicine.',
       },
       {
         label: 'Extend SLA by 24h',
@@ -74,12 +82,16 @@ export const INITIAL_ITEMS = [
     urgency: 'HIGH',
     category: 'Access Provisioning',
     title: 'Expert access provisioning stuck — 8 days silent',
-    expert: { id: 'E-019', name: 'James Okafor', domain: 'Biomedical Ethics', tier: 'Tier 2' },
+    expert: { id: 'E-019', name: 'James Okafor', domain: 'Medical Ethics', tier: 'Tier 2' },
     situation:
       'E-019 (James Okafor) completed onboarding 8 days ago. Access provisioning job (JIRA IT-8842) has been in "Pending" state since Day 1 with no updates. Expert has sent 2 follow-up emails. No tasks have been assigned; expert is effectively inactive.',
     rule: 'Access provisioning silent >5 days → Decision Queue',
     sla_deadline: h(8),
     status: 'OPEN',
+    lifecycle: {
+      stages: ['Onboarding', 'IT Provisioning', 'Access Active', 'First Task'],
+      blocked_at: 1,
+    },
     links: [
       { label: 'Onboarding record', href: '#' },
       { label: 'IT-8842 (Jira)', href: '#' },
@@ -109,12 +121,16 @@ export const INITIAL_ITEMS = [
     urgency: 'MEDIUM',
     category: 'Vendor Reconciliation',
     title: 'Record conflict with vendor: E-022 status mismatch',
-    expert: { id: 'E-022', name: 'Priya Nair', domain: 'International Law', tier: 'Tier 2' },
+    expert: { id: 'E-022', name: 'Priya Nair', domain: 'Legal Reasoning', tier: 'Tier 2' },
     situation:
       'Weekly vendor sync detected a record conflict for E-022 (Priya Nair). Our system shows status: Offboarded (voluntary, 3 weeks ago). Vendor (Scale AI) shows status: Active, with 4 tasks assigned in the past 7 days. Risk: payment disputes, data integrity, and potential expert re-engagement without consent.',
     rule: 'Vendor status mismatch detected → Decision Queue',
     sla_deadline: h(48),
     status: 'OPEN',
+    lifecycle: {
+      stages: ['Weekly Sync', 'Conflict Detected', 'Investigation', 'Resolved'],
+      blocked_at: 1,
+    },
     links: [
       { label: 'E-022 offboarding record', href: '#' },
       { label: 'Vendor sync log', href: '#' },
@@ -141,29 +157,33 @@ export const INITIAL_ITEMS = [
     id: 'DQ-005',
     urgency: 'MEDIUM',
     category: 'Domain Coverage',
-    title: 'Cybersecurity domain at zero coverage — 3 open requests',
+    title: 'Legal reasoning domain at zero coverage — 3 open requests',
     expert: null,
     situation:
-      'The Cybersecurity domain currently has 0 active experts (2 offboarded last month, 1 on leave). There are 3 open requests (REQ-044, REQ-045, REQ-047) totalling 14 tasks that cannot be matched. Projected new requests next 30 days: 5–8 based on historical rate.',
+      'The Legal Reasoning domain currently has 0 active experts (2 offboarded last month, 1 on leave). There are 3 open requests (REQ-044, REQ-045, REQ-047) totalling 14 tasks that cannot be matched. These tasks support Claude enterprise deployment evaluations. Projected new requests next 30 days: 5–8 based on historical rate.',
     rule: 'Domain active expert count = 0 with open requests → Decision Queue',
     sla_deadline: h(72),
     status: 'OPEN',
+    lifecycle: {
+      stages: ['Domain Monitor', 'Zero Coverage', 'Sourcing', 'Active'],
+      blocked_at: 1,
+    },
     links: [
       { label: 'Domain coverage dashboard', href: '#' },
       { label: 'Open requests list', href: '#' },
       { label: 'Sourcing pipeline', href: '#' },
     ],
     timeline: [
-      { at: 'M-30d', event: 'E-011 (Cybersecurity) voluntary offboarding' },
-      { at: 'M-14d', event: 'E-034 (Cybersecurity) voluntary offboarding' },
-      { at: 'M-7d', event: 'E-056 (Cybersecurity) granted 30-day leave' },
+      { at: 'M-30d', event: 'E-011 (Legal Reasoning) voluntary offboarding' },
+      { at: 'M-14d', event: 'E-034 (Legal Reasoning) voluntary offboarding' },
+      { at: 'M-7d', event: 'E-056 (Legal Reasoning) granted 30-day leave' },
       { at: 'Today', event: 'Zero-coverage rule fires — Decision Queue' },
     ],
     options: [
       {
         label: 'Open sourcing pipeline',
         variant: 'primary',
-        confirms_to: 'Sourcing pipeline opened — recruiting team tasked with 3 Cybersecurity expert targets. REQ-044/045/047 set to "Pending Source".',
+        confirms_to: 'Sourcing pipeline opened — recruiting team tasked with 3 Legal Reasoning expert targets. REQ-044/045/047 set to "Pending Source".',
       },
       {
         label: 'Defer requests 30 days',
@@ -211,7 +231,7 @@ export const RULES = [
     id: 'RULE-05',
     name: 'Domain at zero coverage with open requests → Decision Queue',
     trigger: 'Active expert count in a domain drops to 0 while ≥1 open request exists',
-    action: 'Creates DQ item (MEDIUM urgency). Cc\'s sourcing and research lead.',
+    action: "Creates DQ item (MEDIUM urgency). Cc's sourcing and research lead.",
     category: 'Domain Coverage',
     fired_30d: 1,
   },
