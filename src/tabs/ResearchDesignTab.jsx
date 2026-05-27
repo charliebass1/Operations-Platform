@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CAPTURE_FORMATS, CAPTURE_PROGRAMS, COVERAGE_MATRIX, DEPTH_COLORS } from '../data/programData.js'
+import { CAPTURE_FORMATS, COVERAGE_MATRIX, DEPTH_COLORS } from '../data/programData.js'
 import { useWindowSize } from '../hooks/useWindowSize.js'
 
 function ProcessDepthPips({ depth, size = 6 }) {
@@ -97,7 +97,6 @@ function ProtocolCard({ format }) {
           background: 'var(--surface-2)',
           display: 'flex', flexDirection: 'column', gap: 12,
         }}>
-          {/* Scale + burden */}
           <div style={{ display: 'flex', gap: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 11, color: 'var(--txt-3)', minWidth: 36 }}>Scale</span>
@@ -109,7 +108,6 @@ function ProtocolCard({ format }) {
             </div>
           </div>
 
-          {/* Example prompt */}
           <div>
             <div style={{ fontSize: 11, color: 'var(--txt-3)', fontWeight: 500, marginBottom: 6 }}>
               Example prompt
@@ -138,7 +136,59 @@ function ProtocolCard({ format }) {
   )
 }
 
-function ProgramCard({ program, onGoToOps }) {
+function ResearcherNote({ note, acknowledged, onAcknowledge }) {
+  if (!note) return null
+
+  if (acknowledged) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--txt-3)' }}>
+        <span style={{ color: 'var(--green)', fontWeight: 600 }}>✓</span>
+        Acknowledged by Ops Manager ·{' '}
+        {new Date(acknowledged).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      padding: '10px 12px',
+      background: 'var(--accent-lt)',
+      border: '1px solid rgba(196,81,26,0.2)',
+      borderLeft: '3px solid var(--accent)',
+      borderRadius: 'var(--radius-sm)',
+      display: 'flex', flexDirection: 'column', gap: 7,
+    }}>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 11, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--txt-2)', fontWeight: 500 }}>{note.author}</span>
+        <span style={{ color: 'var(--txt-4)' }}>·</span>
+        <span style={{ color: 'var(--txt-3)' }}>{note.role}</span>
+        <span style={{ color: 'var(--txt-4)' }}>·</span>
+        <span style={{ color: 'var(--txt-3)' }}>{note.date}</span>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--txt-2)', lineHeight: 1.6, fontStyle: 'italic' }}>
+        "{note.text}"
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={onAcknowledge}
+          style={{
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'var(--accent)',
+            color: '#fff',
+            border: 'none',
+            fontSize: 11, fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Acknowledge
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ProgramCard({ program, onGoToOps, acknowledged, onAcknowledge }) {
   const fmt = CAPTURE_FORMATS.find(f => f.id === program.format_id)
   const pct = program.target > 0 ? Math.round((program.completed / program.target) * 100) : 0
   const isBlocked = program.status === 'BLOCKED'
@@ -255,6 +305,13 @@ function ProgramCard({ program, onGoToOps }) {
       <div style={{ fontSize: 12, color: 'var(--txt-3)', lineHeight: 1.55 }}>
         {program.description}
       </div>
+
+      {/* Researcher note */}
+      <ResearcherNote
+        note={program.researcher_note}
+        acknowledged={acknowledged}
+        onAcknowledge={onAcknowledge}
+      />
     </div>
   )
 }
@@ -342,7 +399,7 @@ function CoverageHeatmap() {
   )
 }
 
-export function ResearchDesignTab({ programs, items, onGoToOps }) {
+export function ResearchDesignTab({ programs, items, onGoToOps, acknowledgedNotes, onAcknowledgeNote }) {
   const width = useWindowSize()
   const isMobile = width < 768
 
@@ -366,7 +423,13 @@ export function ResearchDesignTab({ programs, items, onGoToOps }) {
           gap: 10,
         }}>
           {programs.map(p => (
-            <ProgramCard key={p.id} program={p} onGoToOps={onGoToOps} />
+            <ProgramCard
+              key={p.id}
+              program={p}
+              onGoToOps={onGoToOps}
+              acknowledged={acknowledgedNotes?.[p.id]}
+              onAcknowledge={() => onAcknowledgeNote(p.id)}
+            />
           ))}
         </div>
       </div>

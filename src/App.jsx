@@ -26,6 +26,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(0)
   const [toast, setToast] = useState(null)
   const [showVision, setShowVision] = useState(false)
+  const [acknowledgedNotes, setAcknowledgedNotes] = useState({})
 
   const openCount    = items.filter(i => i.status === 'OPEN').length
   const slaRiskCount = items.filter(i =>
@@ -56,6 +57,10 @@ export default function App() {
     setHistory(newHistory)
     setToast(option.confirms_to)
   }, [items])
+
+  const handleAcknowledgeNote = useCallback((programId) => {
+    setAcknowledgedNotes(prev => ({ ...prev, [programId]: Date.now() }))
+  }, [])
 
   const handleReset = useCallback(() => {
     clearAll()
@@ -189,6 +194,7 @@ export default function App() {
             batches={batches}
             experts={experts}
             programs={programs}
+            items={items}
             onGoToOps={() => setActiveTab(1)}
           />
         )}
@@ -205,6 +211,8 @@ export default function App() {
             programs={programs}
             items={items}
             onGoToOps={() => setActiveTab(1)}
+            acknowledgedNotes={acknowledgedNotes}
+            onAcknowledgeNote={handleAcknowledgeNote}
           />
         )}
       </main>

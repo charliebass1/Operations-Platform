@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { UrgencyDot, CategoryBadge, RuleBadge } from '../components/Badge.jsx'
 import { SlaCountdown } from '../components/SlaCountdown.jsx'
 
@@ -37,6 +37,67 @@ function ActionButton({ option, onAction, disabled }) {
   )
 }
 
+function LifecyclePipeline({ lifecycle, resolved }) {
+  const { stages, blocked_at } = lifecycle
+
+  return (
+    <div style={{
+      padding: '14px 24px',
+      borderBottom: '1px solid var(--divider)',
+      background: 'var(--surface-2)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 8 }}>
+        {stages.map((stage, i) => {
+          const isDone     = resolved ? i <= blocked_at : i < blocked_at
+          const isBlocked  = !resolved && i === blocked_at
+          const isUpcoming = !resolved && i > blocked_at
+
+          return (
+            <Fragment key={i}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontSize: 9, fontWeight: 700,
+                  ...(isDone ? {
+                    background: 'var(--green-lt)', border: '1px solid var(--green-border)',
+                    color: 'var(--green)',
+                  } : isBlocked ? {
+                    background: 'var(--red-lt)', border: '1px solid var(--red-border)',
+                    color: 'var(--red)',
+                  } : {
+                    background: 'var(--bg)', border: '1px solid var(--border)',
+                    color: 'var(--txt-4)',
+                  }),
+                }}>
+                  {isDone ? '✓' : isBlocked ? '●' : '○'}
+                </div>
+                <span style={{
+                  fontSize: 12, fontWeight: isBlocked ? 500 : 400,
+                  color: isDone ? 'var(--txt-2)' : isBlocked ? 'var(--red)' : 'var(--txt-4)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {stage}
+                </span>
+              </div>
+              {i < stages.length - 1 && (
+                <span style={{ fontSize: 11, color: 'var(--txt-4)', margin: '0 7px' }}>→</span>
+              )}
+            </Fragment>
+          )
+        })}
+      </div>
+      {!resolved && (
+        <div style={{ fontSize: 11, color: 'var(--txt-3)', marginTop: 8 }}>
+          Blocked at{' '}
+          <strong style={{ color: 'var(--txt-2)', fontWeight: 500 }}>{stages[blocked_at]}</strong>
+          {' '}— choose an action below to continue.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DecisionItem({ item, onAction }) {
   const [expanded, setExpanded] = useState(false)
   const [hover, setHover] = useState(false)
@@ -64,10 +125,8 @@ function DecisionItem({ item, onAction }) {
           transition: 'background var(--transition)',
         }}
       >
-        {/* Urgency dot */}
         <UrgencyDot level={item.urgency} />
 
-        {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 14, fontWeight: 500, color: 'var(--txt)',
@@ -85,7 +144,6 @@ function DecisionItem({ item, onAction }) {
           </div>
         </div>
 
-        {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
           <CategoryBadge category={item.category} />
           <SlaCountdown deadline={item.sla_deadline} urgency={item.urgency} />
@@ -104,7 +162,12 @@ function DecisionItem({ item, onAction }) {
           borderTop: '1px solid var(--divider)',
           background: 'var(--surface)',
         }}>
-          {/* Situation + Timeline in a 2-col layout */}
+          {/* Lifecycle pipeline */}
+          {item.lifecycle && (
+            <LifecyclePipeline lifecycle={item.lifecycle} resolved={item.status !== 'OPEN'} />
+          )}
+
+          {/* Situation + Timeline */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
             <div style={{ padding: '20px 24px', borderRight: '1px solid var(--divider)' }}>
               <div style={{ fontSize: 11, color: 'var(--txt-3)', marginBottom: 8, fontWeight: 500 }}>
@@ -217,7 +280,6 @@ export function QueueTab({ items, onAction, onReset }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Column headers — subtle, only on wider view */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14,
         padding: '0 18px 6px',
