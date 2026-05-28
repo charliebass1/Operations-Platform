@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { INITIAL_ITEMS } from './data/decisions.js'
-import { deriveResearchState } from './data/research.js'
-import { CAPTURE_PROGRAMS, deriveProgramState } from './data/programData.js'
+import { JOBS, STUDY_DESIGNS } from './data/jobs.js'
 import { loadItems, saveItems, loadHistory, appendHistory, clearAll } from './lib/storage.js'
 import { KpiChip } from './components/KpiChip.jsx'
 import { Toast } from './components/Toast.jsx'
@@ -21,21 +20,28 @@ export default function App() {
   const width = useWindowSize()
   const isMobile = width < 768
 
-  const [items, setItems] = useState(() => loadItems(INITIAL_ITEMS))
+  const [items, setItems] = useState(() => {
+    if (localStorage.getItem('ops_version') !== 'v3') {
+      clearAll()
+      localStorage.setItem('ops_version', 'v3')
+      return INITIAL_ITEMS
+    }
+    return loadItems(INITIAL_ITEMS)
+  })
   const [history, setHistory] = useState(() => loadHistory())
   const [activeTab, setActiveTab] = useState(0)
   const [toast, setToast] = useState(null)
   const [showVision, setShowVision] = useState(false)
-  const [acknowledgedNotes, setAcknowledgedNotes] = useState({})
+  const [messageThreads, setMessageThreads] = useState(
+    () => Object.fromEntries(STUDY_DESIGNS.map(sd => [sd.id, sd.messages]))
+  )
 
   const openCount    = items.filter(i => i.status === 'OPEN').length
   const slaRiskCount = items.filter(i =>
     i.status === 'OPEN' && (i.sla_deadline - Date.now()) < 20 * 3_600_000
   ).length
   const resolvedCount = items.filter(i => i.status !== 'OPEN').length
-
-  const { batches, experts } = useMemo(() => deriveResearchState(items), [items])
-  const programs = useMemo(() => deriveProgramState(CAPTURE_PROGRAMS, items), [items])
+  const activeStudies = JOBS.filter(j => j.status === 'ACTIVE').length
 
   const handleAction = useCallback((itemId, option) => {
     const newStatus = option.label.toLowerCase().includes('defer') ? 'DEFERRED'
@@ -58,8 +64,14 @@ export default function App() {
     setToast(option.confirms_to)
   }, [items])
 
-  const handleAcknowledgeNote = useCallback((programId) => {
-    setAcknowledgedNotes(prev => ({ ...prev, [programId]: Date.now() }))
+  const handleSendMessage = useCallback((studyId, text) => {
+    setMessageThreads(prev => ({
+      ...prev,
+      [studyId]: [
+        ...prev[studyId],
+        { id: Date.now(), author: 'Ops Manager', role: 'Ops', at: new Date().toISOString(), text },
+      ],
+    }))
   }, [])
 
   const handleReset = useCallback(() => {
@@ -134,10 +146,10 @@ export default function App() {
             sub={resolvedCount > 0 ? 'Decisions actioned' : 'Nothing resolved yet'}
           />
           <KpiChip
-            label="Capture Programs"
-            value={programs.filter(p => p.status === 'ACTIVE' || p.status === 'IN REVIEW').length}
+            label="Studies"
+            value={activeStudies}
             dotColor={null}
-            sub={`${programs.filter(p => p.status === 'BLOCKED').length} blocked`}
+            sub={`${JOBS.filter(j => j.status === 'CLOSED').length} closed`}
           />
         </div>
 
@@ -189,15 +201,7 @@ export default function App() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 0 && (
-          <DashboardTab
-            batches={batches}
-            experts={experts}
-            programs={programs}
-            items={items}
-            onGoToOps={() => setActiveTab(1)}
-          />
-        )}
+        {activeTab === 0 && <DashboardTab />}
         {activeTab === 1 && (
           <OpsTab
             items={items}
@@ -208,11 +212,8 @@ export default function App() {
         )}
         {activeTab === 2 && (
           <ResearchDesignTab
-            programs={programs}
-            items={items}
-            onGoToOps={() => setActiveTab(1)}
-            acknowledgedNotes={acknowledgedNotes}
-            onAcknowledgeNote={handleAcknowledgeNote}
+            messageThreads={messageThreads}
+            onSendMessage={handleSendMessage}
           />
         )}
       </main>
