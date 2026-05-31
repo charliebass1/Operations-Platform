@@ -16,6 +16,17 @@ export const JOBS = [
       'Uncertainty narration is richest in the first 30% of each session',
       'All 5 participants so far introduced domain analogies unprompted',
     ],
+    health: {
+      status: 'WATCH',
+      reason: 'Process depth score trending down on last 3 sessions — recent avg 0.68 vs. study threshold of 0.75.',
+      metrics: [
+        { name: 'Process Depth', value: '0.76', target: 0.75, status: 'warn', detail: 'Avg across all sessions — but last 3 are below threshold' },
+        { name: 'Session Quality', value: '4.1 / 5', status: 'ok', detail: 'Expert self-reported rating' },
+        { name: 'Expert Retention', value: '100%', status: 'ok', detail: 'No dropouts' },
+      ],
+      session_scores: [0.82, 0.84, 0.79, 0.81, 0.78, 0.80, 0.76, 0.74, 0.73, 0.69, 0.71, 0.68, 0.66, null, null, null],
+      score_threshold: 0.75,
+    },
   },
   {
     id: 'JOB-002',
@@ -31,6 +42,17 @@ export const JOBS = [
     summary: 'Teaching-demo protocol to capture clinical diagnostic reasoning from MD-level experts — differential diagnosis and clinical decision-making under uncertainty. Signal not available in published case reports.',
     design_stage: 'Protocol Approved — Expert Sourcing Pending',
     design_notes: 'Expert sourcing is blocked pending DQ-002 resolution. Protocol and consent forms approved by research committee on May 20.',
+    health: {
+      status: 'AT RISK',
+      reason: 'Cannot start collection — 0 qualified clinicians available. Blocked on DQ-002 resolution.',
+      metrics: [
+        { name: 'Expert Pipeline', value: '0', status: 'critical', detail: 'No qualified MDs in active pool' },
+        { name: 'Days to Deadline', value: '61', status: 'warn', detail: 'Estimated 6-week collection needed' },
+        { name: 'Protocol Status', value: 'Approved', status: 'ok', detail: 'IRB and research committee signed off' },
+      ],
+      session_scores: [],
+      score_threshold: 0.75,
+    },
   },
   {
     id: 'JOB-003',
@@ -53,6 +75,18 @@ export const JOBS = [
         'Self-censorship of dissenting views observed in ~40% of sessions',
         'CoT prompting improved IRR from 0.61 → 0.78 after mid-study calibration',
       ],
+    },
+    health: {
+      status: 'COMPLETE',
+      reason: 'All quality targets met after mid-study calibration intervention.',
+      metrics: [
+        { name: 'Final IRR', value: '0.78', target: 0.70, status: 'ok', detail: 'Above 0.70 threshold after calibration' },
+        { name: 'Process Depth', value: '0.71', target: 0.70, status: 'ok', detail: 'Meets minimum threshold' },
+        { name: 'Completion', value: '100%', status: 'ok', detail: '20/20 sessions collected' },
+      ],
+      session_scores: [0.61, 0.58, 0.63, 0.60, 0.62, 0.59, 0.64, null, 0.78, 0.76, 0.80, 0.79, 0.77, 0.81, 0.78, 0.80, 0.79, 0.78, 0.82, 0.78],
+      score_threshold: 0.70,
+      calibration_at: 7,
     },
   },
 ]
